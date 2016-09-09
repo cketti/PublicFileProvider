@@ -16,8 +16,12 @@
 
 package de.cketti.fileprovider;
 
-import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
-import static org.xmlpull.v1.XmlPullParser.START_TAG;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -37,11 +41,9 @@ import android.webkit.MimeTypeMap;
 
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+
 
 /**
  * FileProvider is a special subclass of {@link ContentProvider} that facilitates secure sharing
@@ -321,11 +323,9 @@ import java.util.Map;
  * </p>
  */
 public class FileProvider extends ContentProvider {
-    private static final String[] COLUMNS = {
-            OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE };
+    private static final String[] COLUMNS = { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE };
 
-    private static final String
-            META_DATA_FILE_PROVIDER_PATHS = "android.support.FILE_PROVIDER_PATHS";
+    private static final String META_DATA_FILE_PROVIDER_PATHS = "android.support.FILE_PROVIDER_PATHS";
 
     private static final String TAG_ROOT_PATH = "root-path";
     private static final String TAG_FILES_PATH = "files-path";
@@ -339,10 +339,10 @@ public class FileProvider extends ContentProvider {
 
     private static final File DEVICE_ROOT = new File("/");
 
-    // @GuardedBy("sCache")
-    private static HashMap<String, PathStrategy> sCache = new HashMap<String, PathStrategy>();
+    // @GuardedBy("cache")
+    private static final HashMap<String, PathStrategy> cache = new HashMap<>();
 
-    private PathStrategy mStrategy;
+    private PathStrategy strategy;
 
     /**
      * The default FileProvider implementation does not need to be initialized. If you want to
@@ -372,7 +372,7 @@ public class FileProvider extends ContentProvider {
             throw new SecurityException("Provider must grant uri permissions");
         }
 
-        mStrategy = getPathStrategy(context, info.authority);
+        strategy = getPathStrategy(context, info.authority);
     }
 
     /**
@@ -396,7 +396,7 @@ public class FileProvider extends ContentProvider {
      * the paths supported by the provider.
      */
     public static Uri getUriForFile(Context context, String authority, File file) {
-        final PathStrategy strategy = getPathStrategy(context, authority);
+        PathStrategy strategy = getPathStrategy(context, authority);
         return strategy.getUriForFile(file);
     }
 
@@ -429,32 +429,31 @@ public class FileProvider extends ContentProvider {
      *
      */
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-            String sortOrder) {
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         // ContentProvider has already checked granted permissions
-        final File file = mStrategy.getFileForUri(uri);
+        File file = strategy.getFileForUri(uri);
 
         if (projection == null) {
             projection = COLUMNS;
         }
 
-        String[] cols = new String[projection.length];
+        String[] columns = new String[projection.length];
         Object[] values = new Object[projection.length];
         int i = 0;
-        for (String col : projection) {
-            if (OpenableColumns.DISPLAY_NAME.equals(col)) {
-                cols[i] = OpenableColumns.DISPLAY_NAME;
+        for (String column : projection) {
+            if (OpenableColumns.DISPLAY_NAME.equals(column)) {
+                columns[i] = OpenableColumns.DISPLAY_NAME;
                 values[i++] = file.getName();
-            } else if (OpenableColumns.SIZE.equals(col)) {
-                cols[i] = OpenableColumns.SIZE;
+            } else if (OpenableColumns.SIZE.equals(column)) {
+                columns[i] = OpenableColumns.SIZE;
                 values[i++] = file.length();
             }
         }
 
-        cols = copyOf(cols, i);
+        columns = copyOf(columns, i);
         values = copyOf(values, i);
 
-        final MatrixCursor cursor = new MatrixCursor(cols, 1);
+        MatrixCursor cursor = new MatrixCursor(columns, 1);
         cursor.addRow(values);
         return cursor;
     }
@@ -471,12 +470,12 @@ public class FileProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         // ContentProvider has already checked granted permissions
-        final File file = mStrategy.getFileForUri(uri);
+        File file = strategy.getFileForUri(uri);
 
-        final int lastDot = file.getName().lastIndexOf('.');
+        int lastDot = file.getName().lastIndexOf('.');
         if (lastDot >= 0) {
-            final String extension = file.getName().substring(lastDot + 1);
-            final String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            String extension = file.getName().substring(lastDot + 1);
+            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
             if (mime != null) {
                 return mime;
             }
@@ -517,7 +516,7 @@ public class FileProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         // ContentProvider has already checked granted permissions
-        final File file = mStrategy.getFileForUri(uri);
+        File file = strategy.getFileForUri(uri);
         return file.delete() ? 1 : 0;
     }
 
@@ -539,8 +538,8 @@ public class FileProvider extends ContentProvider {
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
         // ContentProvider has already checked granted permissions
-        final File file = mStrategy.getFileForUri(uri);
-        final int fileMode = modeToMode(mode);
+        File file = strategy.getFileForUri(uri);
+        int fileMode = modeToMode(mode);
         return ParcelFileDescriptor.open(file, fileMode);
     }
 
@@ -549,23 +548,20 @@ public class FileProvider extends ContentProvider {
      * returning from cache.
      */
     private static PathStrategy getPathStrategy(Context context, String authority) {
-        PathStrategy strat;
-        synchronized (sCache) {
-            strat = sCache.get(authority);
-            if (strat == null) {
+        PathStrategy pathStrategy;
+        synchronized (cache) {
+            pathStrategy = cache.get(authority);
+            if (pathStrategy == null) {
                 try {
-                    strat = parsePathStrategy(context, authority);
-                } catch (IOException e) {
-                    throw new IllegalArgumentException(
-                            "Failed to parse " + META_DATA_FILE_PROVIDER_PATHS + " meta-data", e);
-                } catch (XmlPullParserException e) {
+                    pathStrategy = parsePathStrategy(context, authority);
+                } catch (IOException | XmlPullParserException e) {
                     throw new IllegalArgumentException(
                             "Failed to parse " + META_DATA_FILE_PROVIDER_PATHS + " meta-data", e);
                 }
-                sCache.put(authority, strat);
+                cache.put(authority, pathStrategy);
             }
         }
-        return strat;
+        return pathStrategy;
     }
 
     /**
@@ -574,26 +570,24 @@ public class FileProvider extends ContentProvider {
      *
      * @see #getPathStrategy(Context, String)
      */
-    private static PathStrategy parsePathStrategy(Context context, String authority)
+    private static PathStrategy parsePathStrategy(Context context, String authority) 
             throws IOException, XmlPullParserException {
-        final SimplePathStrategy strat = new SimplePathStrategy(authority);
+        SimplePathStrategy pathStrategy = new SimplePathStrategy(authority);
 
-        final ProviderInfo info = context.getPackageManager()
-                .resolveContentProvider(authority, PackageManager.GET_META_DATA);
-        final XmlResourceParser in = info.loadXmlMetaData(
-                context.getPackageManager(), META_DATA_FILE_PROVIDER_PATHS);
-        if (in == null) {
-            throw new IllegalArgumentException(
-                    "Missing " + META_DATA_FILE_PROVIDER_PATHS + " meta-data");
+        PackageManager packageManager = context.getPackageManager();
+        ProviderInfo info = packageManager.resolveContentProvider(authority, PackageManager.GET_META_DATA);
+        XmlResourceParser parser = info.loadXmlMetaData(packageManager, META_DATA_FILE_PROVIDER_PATHS);
+        if (parser == null) {
+            throw new IllegalArgumentException("Missing " + META_DATA_FILE_PROVIDER_PATHS + " meta-data");
         }
 
         int type;
-        while ((type = in.next()) != END_DOCUMENT) {
+        while ((type = parser.next()) != END_DOCUMENT) {
             if (type == START_TAG) {
-                final String tag = in.getName();
+                String tag = parser.getName();
 
-                final String name = in.getAttributeValue(null, ATTR_NAME);
-                String path = in.getAttributeValue(null, ATTR_PATH);
+                String name = parser.getAttributeValue(null, ATTR_NAME);
+                String path = parser.getAttributeValue(null, ATTR_PATH);
 
                 File target = null;
                 if (TAG_ROOT_PATH.equals(tag)) {
@@ -617,12 +611,12 @@ public class FileProvider extends ContentProvider {
                 }
 
                 if (target != null) {
-                    strat.addRoot(name, buildPath(target, path));
+                    pathStrategy.addRoot(name, buildPath(target, path));
                 }
             }
         }
 
-        return strat;
+        return pathStrategy;
     }
 
     /**
@@ -642,12 +636,12 @@ public class FileProvider extends ContentProvider {
         /**
          * Return a {@link Uri} that represents the given {@link File}.
          */
-        public Uri getUriForFile(File file);
+        Uri getUriForFile(File file);
 
         /**
          * Return a {@link File} that represents the given {@link Uri}.
          */
-        public File getFileForUri(Uri uri);
+        File getFileForUri(Uri uri);
     }
 
     /**
@@ -661,18 +655,18 @@ public class FileProvider extends ContentProvider {
      * {@code content://myauthority/myfiles/foo.txt}.
      */
     static class SimplePathStrategy implements PathStrategy {
-        private final String mAuthority;
-        private final HashMap<String, File> mRoots = new HashMap<String, File>();
+        private final String authority;
+        private final HashMap<String, File> roots = new HashMap<>();
 
-        public SimplePathStrategy(String authority) {
-            mAuthority = authority;
+        SimplePathStrategy(String authority) {
+            this.authority = authority;
         }
 
         /**
          * Add a mapping from a name to a filesystem root. The provider only offers
          * access to files that live under configured roots.
          */
-        public void addRoot(String name, File root) {
+        void addRoot(String name, File root) {
             if (TextUtils.isEmpty(name)) {
                 throw new IllegalArgumentException("Name must not be empty");
             }
@@ -681,11 +675,10 @@ public class FileProvider extends ContentProvider {
                 // Resolve to canonical path to keep path checking fast
                 root = root.getCanonicalFile();
             } catch (IOException e) {
-                throw new IllegalArgumentException(
-                        "Failed to resolve canonical path for " + root, e);
+                throw new IllegalArgumentException("Failed to resolve canonical path for " + root, e);
             }
 
-            mRoots.put(name, root);
+            roots.put(name, root);
         }
 
         @Override
@@ -699,21 +692,20 @@ public class FileProvider extends ContentProvider {
 
             // Find the most-specific root path
             Map.Entry<String, File> mostSpecific = null;
-            for (Map.Entry<String, File> root : mRoots.entrySet()) {
-                final String rootPath = root.getValue().getPath();
-                if (path.startsWith(rootPath) && (mostSpecific == null
-                        || rootPath.length() > mostSpecific.getValue().getPath().length())) {
+            for (Map.Entry<String, File> root : roots.entrySet()) {
+                String rootPath = root.getValue().getPath();
+                if (path.startsWith(rootPath) && (mostSpecific == null ||
+                        rootPath.length() > mostSpecific.getValue().getPath().length())) {
                     mostSpecific = root;
                 }
             }
 
             if (mostSpecific == null) {
-                throw new IllegalArgumentException(
-                        "Failed to find configured root that contains " + path);
+                throw new IllegalArgumentException("Failed to find configured root that contains " + path);
             }
 
             // Start at first char of path under root
-            final String rootPath = mostSpecific.getValue().getPath();
+            String rootPath = mostSpecific.getValue().getPath();
             if (rootPath.endsWith("/")) {
                 path = path.substring(rootPath.length());
             } else {
@@ -722,19 +714,22 @@ public class FileProvider extends ContentProvider {
 
             // Encode the tag and path separately
             path = Uri.encode(mostSpecific.getKey()) + '/' + Uri.encode(path, "/");
-            return new Uri.Builder().scheme("content")
-                    .authority(mAuthority).encodedPath(path).build();
+            return new Uri.Builder()
+                    .scheme("content")
+                    .authority(authority)
+                    .encodedPath(path)
+                    .build();
         }
 
         @Override
         public File getFileForUri(Uri uri) {
             String path = uri.getEncodedPath();
 
-            final int splitIndex = path.indexOf('/', 1);
-            final String tag = Uri.decode(path.substring(1, splitIndex));
+            int splitIndex = path.indexOf('/', 1);
+            String tag = Uri.decode(path.substring(1, splitIndex));
             path = Uri.decode(path.substring(splitIndex + 1));
 
-            final File root = mRoots.get(tag);
+            File root = roots.get(tag);
             if (root == null) {
                 throw new IllegalArgumentException("Unable to find configured root for " + uri);
             }
@@ -762,23 +757,24 @@ public class FileProvider extends ContentProvider {
         if ("r".equals(mode)) {
             modeBits = ParcelFileDescriptor.MODE_READ_ONLY;
         } else if ("w".equals(mode) || "wt".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_TRUNCATE;
+            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY |
+                    ParcelFileDescriptor.MODE_CREATE |
+                    ParcelFileDescriptor.MODE_TRUNCATE;
         } else if ("wa".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_APPEND;
+            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY |
+                    ParcelFileDescriptor.MODE_CREATE |
+                    ParcelFileDescriptor.MODE_APPEND;
         } else if ("rw".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
-                    | ParcelFileDescriptor.MODE_CREATE;
+            modeBits = ParcelFileDescriptor.MODE_READ_WRITE |
+                    ParcelFileDescriptor.MODE_CREATE;
         } else if ("rwt".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_TRUNCATE;
+            modeBits = ParcelFileDescriptor.MODE_READ_WRITE |
+                    ParcelFileDescriptor.MODE_CREATE |
+                    ParcelFileDescriptor.MODE_TRUNCATE;
         } else {
             throw new IllegalArgumentException("Invalid mode: " + mode);
         }
+        
         return modeBits;
     }
 
@@ -793,13 +789,13 @@ public class FileProvider extends ContentProvider {
     }
 
     private static String[] copyOf(String[] original, int newLength) {
-        final String[] result = new String[newLength];
+        String[] result = new String[newLength];
         System.arraycopy(original, 0, result, 0, newLength);
         return result;
     }
 
     private static Object[] copyOf(Object[] original, int newLength) {
-        final Object[] result = new Object[newLength];
+        Object[] result = new Object[newLength];
         System.arraycopy(original, 0, result, 0, newLength);
         return result;
     }
