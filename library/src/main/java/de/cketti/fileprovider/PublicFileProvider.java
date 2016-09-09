@@ -322,7 +322,7 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  *    <a href="{@docRoot}training/secure-file-sharing/index.html">Sharing Files Securely with URIs</a>.
  * </p>
  */
-public class FileProvider extends ContentProvider {
+public class PublicFileProvider extends ContentProvider {
     private static final String[] COLUMNS = { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE };
 
     private static final String META_DATA_FILE_PROVIDER_PATHS = "android.support.FILE_PROVIDER_PATHS";
@@ -387,7 +387,7 @@ public class FileProvider extends ContentProvider {
      * meta-data element. See the Class Overview for more information.
      *
      * @param context A {@link Context} for the current component.
-     * @param authority The authority of a {@link FileProvider} defined in a
+     * @param authority The authority of a {@link PublicFileProvider} defined in a
      *            {@code <provider>} element in your app's manifest.
      * @param file A {@link File} pointing to the filename for which you want a
      * <code>content</code> {@link Uri}.
