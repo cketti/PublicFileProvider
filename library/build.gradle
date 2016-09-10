@@ -9,3 +9,26 @@ android {
         minSdkVersion 14
     }
 }
+
+project.ext {
+    pom = [
+            group: "de.cketti.fileprovider",
+            artifactId: "public-fileprovider",
+            name: "PublicFileProvider",
+            description: "Android library to publicly expose files via content:// URI. Consider using FileProvider instead!",
+            url: "https://github.com/cketti/PublicFileProvider",
+
+            scmUrl: "https://github.com/cketti/PublicFileProvider",
+            scmConnection: "scm:git@github.com:cketti/PublicFileProvider.git",
+            scmDevConnection: "scm:git@github.com:cketti/PublicFileProvider.git",
+
+            licenseName: "The Apache Software License, Version 2.0",
+            licenseUrl: "http://www.apache.org/licenses/LICENSE-2.0.txt",
+            licenseDist: "repo",
+
+            developerId: "cketti",
+            developerName: "cketti"
+    ]
+}
+
+apply from: '../android-mvn-push.gradle'
