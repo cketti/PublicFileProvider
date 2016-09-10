@@ -127,7 +127,7 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  *     Context.getFilesDir()}.
  *     </div>
  *     <div class="dt">
- * <pre>
+ * <pre class="prettyprint">
  *&lt;cache-path name="<i>name</i>" path="<i>path</i>" /&gt;
  *</pre>
  *     </div>
