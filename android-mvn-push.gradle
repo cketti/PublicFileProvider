@@ -65,6 +65,10 @@ afterEvaluate { project ->
             stylesheetFile = new File(rootProject.projectDir, "stylesheet.css");
             bottom = "<script src=\"https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js\"></script>"
         }
+
+        if (javax.tools.ToolProvider.getSystemDocumentationTool().isSupportedOption("--allow-script-in-comments")) {
+            options.addBooleanOption("-allow-script-in-comments", true)
+        }
     }
 
     task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
