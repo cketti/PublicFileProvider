@@ -7,6 +7,7 @@ PublicFileProvider is a special subclass of [`ContentProvider`](https://develope
 PublicFileProvider is a modified version of FileProvider with the specific goal to expose files without using Android's URI permission mechanism. This can come in handy when you have to provide a `content://` URI but can't easily grant read access to whatever app ends up accessing the content.
 One use case is a custom ringtone in a notification. Check out the blog post [Notifications, Sounds, Android 7.0, and Aggravation](https://commonsware.com/blog/2016/09/07/notifications-sounds-android-7p0-aggravation.html) for more details.
 
+
 ## Usage
 
 Add a provider element to your Manifest:
@@ -47,6 +48,16 @@ File notificationSoundsPath = new File(Context.getFilesDir(), "notification_soun
 File myNotificationSoundFile = new File(imagePath, "ding.ogg");
 Uri contentUri = getUriForFile(getContext(), "com.mydomain.publicfileprovider", myNotificationSoundFile);
 ```
+
+
+## Include the library
+
+The library is available on Maven Central. Add this to your `dependencies` block in `build.gradle`:
+
+```groovy
+compile 'de.cketti.fileprovider:public-fileprovider:1.0.0'
+```
+
 
 ## License
 
