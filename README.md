@@ -9,8 +9,44 @@ One use case is a custom ringtone in a notification. Check out the blog post [No
 
 ## Usage
 
-It's configured just like [FileProvider](https://developer.android.com/reference/android/support/v4/content/FileProvider.html).
+Add a provider element to your Manifest:
 
+```xml
+<manifest>
+    ...
+    <application>
+        ...
+        <provider
+            android:name="de.cketti.fileprovider.PublicFileProvider"
+            android:authorities="com.mydomain.publicfileprovider"
+            android:exported="true">
+            
+            <meta-data
+                android:name="de.cketti.fileprovider.PUBLIC_FILE_PROVIDER_PATHS"
+                android:resource="@xml/publicfileprovider_paths" />
+        
+        </provider>
+        ...
+    </application>
+</manifest>
+```
+
+Create a file `res/xml/publicfileprovider_paths.xml` with the configuration, e.g.
+
+```xml
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="my_notification_sounds" path="notification_sounds/"/>
+</paths>
+```
+The format of this file is identical to that of [FileProvider](https://developer.android.com/reference/android/support/v4/content/FileProvider.html).
+
+To get the `content://` URI for a file you want to expose to all apps on the device use the following code:
+
+```java
+File notificationSoundsPath = new File(Context.getFilesDir(), "notification_sounds");
+File myNotificationSoundFile = new File(imagePath, "ding.ogg");
+Uri contentUri = getUriForFile(getContext(), "com.mydomain.publicfileprovider", myNotificationSoundFile);
+```
 
 ## License
 

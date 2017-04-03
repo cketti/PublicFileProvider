@@ -80,7 +80,7 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  * <code>de.cketti.fileprovider.PublicFileProvider</code>. Set the <code>android:authorities</code>
  * attribute to a URI authority based on a domain you control; for example, if you control the
  * domain <code>mydomain.com</code> you should use the authority
- * <code>com.mydomain.fileprovider</code>. Set the <code>android:exported</code> attribute to
+ * <code>com.mydomain.publicfileprovider</code>. Set the <code>android:exported</code> attribute to
  * <code>true</code>. For example:
  * <pre class="prettyprint">
  *&lt;manifest&gt;
@@ -89,7 +89,7 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  *        ...
  *        &lt;provider
  *            android:name="de.cketti.fileprovider.PublicFileProvider"
- *            android:authorities="com.mydomain.fileprovider"
+ *            android:authorities="com.mydomain.publicfileprovider"
  *            android:exported="true"&gt;
  *            ...
  *        &lt;/provider&gt;
@@ -108,7 +108,7 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  * request content URIs for the <code>images/</code> subdirectory of your private file area.
  * <pre class="prettyprint">
  *&lt;paths xmlns:android="http://schemas.android.com/apk/res/android"&gt;
- *    &lt;files-path name="my_images" path="images/"/&gt;
+ *    &lt;files-path name="my_notification_sounds" path="notification_sounds/"/&gt;
  *    ...
  *&lt;/paths&gt;
  *</pre>
@@ -201,22 +201,22 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  *</pre>
  * <p>
  * Put the <code>&lt;paths&gt;</code> element and its children in an XML file in your project.
- * For example, you can add them to a new file called <code>res/xml/file_paths.xml</code>.
+ * For example, you can add them to a new file called <code>res/xml/publicfileprovider_paths.xml</code>.
  * To link this file to the PublicFileProvider, add a
  * <a href="{@docRoot}guide/topics/manifest/meta-data-element.html">&lt;meta-data&gt;</a> element
  * as a child of the <code>&lt;provider&gt;</code> element that defines the PublicFileProvider. Set the
  * <code>&lt;meta-data&gt;</code> element's "android:name" attribute to
  * <code>de.cketti.fileprovider.PUBLIC_FILE_PROVIDER_PATHS</code>. Set the element's "android:resource" attribute
- * to <code>&#64;xml/file_paths</code> (notice that you don't specify the <code>.xml</code>
+ * to <code>&#64;xml/publicfileprovider_paths</code> (notice that you don't specify the <code>.xml</code>
  * extension). For example:
  * <pre class="prettyprint">
  *&lt;provider
  *    android:name="de.cketti.fileprovider.PublicFileProvider"
- *    android:authorities="com.mydomain.fileprovider"
+ *    android:authorities="com.mydomain.publicfileprovider"
  *    android:exported="true"&gt;
  *    &lt;meta-data
  *        android:name="de.cketti.fileprovider.PUBLIC_FILE_PROVIDER_PATHS"
- *        android:resource="&#64;xml/file_paths" /&gt;
+ *        android:resource="&#64;xml/publicfileprovider_paths" /&gt;
  *&lt;/provider&gt;
  *</pre>
  * <h3 id="GetUri">Generating the Content URI for a File</h3>
@@ -231,17 +231,17 @@ import static org.xmlpull.v1.XmlPullParser.START_TAG;
  * ContentResolver.openFileDescriptor} to get a {@link ParcelFileDescriptor}.
  * <p>
  * For example, suppose your app is offering files to other apps with a PublicFileProvider that has the
- * authority <code>com.mydomain.fileprovider</code>. To get a content URI for the file
+ * authority <code>com.mydomain.publicfileprovider</code>. To get a content URI for the file
  * <code>default_image.jpg</code> in the <code>images/</code> subdirectory of your internal storage
  * add the following code:
  * <pre class="prettyprint">
  *File imagePath = new File(Context.getFilesDir(), "images");
  *File newFile = new File(imagePath, "default_image.jpg");
- *Uri contentUri = getUriForFile(getContext(), "com.mydomain.fileprovider", newFile);
+ *Uri contentUri = getUriForFile(getContext(), "com.mydomain.publicfileprovider", newFile);
  *</pre>
  * As a result of the previous snippet,
  * {@link #getUriForFile(Context, String, File) getUriForFile()} returns the content URI
- * <code>content://com.mydomain.fileprovider/my_images/default_image.jpg</code>.
+ * <code>content://com.mydomain.publicfileprovider/my_images/default_image.jpg</code>.
  */
 public class PublicFileProvider extends ContentProvider {
     private static final String[] COLUMNS = { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE };
