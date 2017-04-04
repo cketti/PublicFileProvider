@@ -6,6 +6,7 @@ PublicFileProvider is a special subclass of [`ContentProvider`](https://develope
  
 PublicFileProvider is a modified version of FileProvider with the specific goal to expose files without using Android's URI permission mechanism. This can come in handy when you have to provide a `content://` URI but can't easily grant read access to whatever app ends up accessing the content.
 One use case is a custom ringtone in a notification. Check out the blog post [Notifications, Sounds, Android 7.0, and Aggravation](https://commonsware.com/blog/2016/09/07/notifications-sounds-android-7p0-aggravation.html) for more details.
+I also wrote a bit about how this library came to be: [When URI permissions are in the way](http://cketti.de/2017/04/03/when-uri-permissions-are-in-the-way/)
 
 
 ## Usage
